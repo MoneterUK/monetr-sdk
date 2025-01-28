@@ -1,6 +1,6 @@
 {
   "name": "@monetrcouk/monetr-sdk",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "SDK to report data into monetr.co.uk",
   "main": "index.js",
   "scripts": {
@@ -11,5 +11,8 @@
   "repository": {
     "type": "git",
     "url": "https://github.com/MoneterUK/monetr-sdk"
+  },
+  "dependencies": {
+    "axios": "^1.7.9"
   }
 }
