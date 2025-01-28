@@ -1,0 +1,11 @@
+{
+  "name": "@monetr/monetr-sdk",
+  "version": "1.0.0",
+  "description": "SDK to report data into monetr.co.uk",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Monetr",
+  "license": "ISC"
+}
