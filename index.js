@@ -2,10 +2,10 @@ const axios = require("axios");
 let apiBase = "https://api-p.monetr.co.uk/api/v1";
 
 const environments = {
-    production: "https://api-p.monetr.co.uk/api/v1",
-    staging: "https://api-s.monetr.co.uk/api/v1",
-    development: "http://localhost:8080/api/v1",
-}
+  production: "https://api-p.monetr.co.uk/api/v1",
+  staging: "https://api-s.monetr.co.uk/api/v1",
+  development: "http://localhost:8080/api/v1",
+};
 
 let token = null;
 const setToken = (token) => {
@@ -13,7 +13,7 @@ const setToken = (token) => {
 };
 
 const setEnvironment = (environment) => {
-    this.apiBase = environments[environment];    
+  this.apiBase = environments[environment];
 };
 
 const report = (kpiId, kpiDimensionId, value) => {
@@ -26,7 +26,7 @@ const report = (kpiId, kpiDimensionId, value) => {
       `${apiBase}/kpis/${kpiId}/values/report-realtime/${kpiDimensionId}`,
       { value },
       { headers }
-    )
+    );
     return { send: true };
   } catch (e) {
     //console.error(e);
