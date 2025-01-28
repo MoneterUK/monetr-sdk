@@ -1,5 +1,5 @@
 {
-  "name": "@monetr/monetr-sdk",
+  "name": "@monetrcouk/monetr-sdk",
   "version": "1.0.0",
   "description": "SDK to report data into monetr.co.uk",
   "main": "index.js",
@@ -7,5 +7,9 @@
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "Monetr",
-  "license": "ISC"
+  "license": "ISC",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/MoneterUK/monetr-sdk"
+  }
 }
