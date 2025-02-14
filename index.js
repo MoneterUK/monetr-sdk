@@ -16,15 +16,15 @@ const setEnvironment = (environment) => {
   this.apiBase = environments[environment];
 };
 
-const report = (kpiId, kpiDimensionId, value) => {
+const report = async (kpiId, kpiDimensionId, value, date) => {
   try {
     const headers = {
       "monetr-sdk-token": this.token,
     };
     const apiBase = this.apiBase || environments.production;
-    axios.post(
+    await axios.post(
       `${apiBase}/kpis/${kpiId}/values/report-realtime/${kpiDimensionId}`,
-      { value },
+      { value, date },
       { headers }
     );
     return { send: true };
