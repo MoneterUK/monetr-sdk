@@ -27,10 +27,10 @@ const report = async (kpiId, kpiDimensionId, value, date) => {
       { value, date },
       { headers }
     );
-    return { send: true };
+    return true;
   } catch (e) {
-    //console.error(e);
-    return e;
+    console.error(e);
+    return false;
   }
 };
 
