@@ -1,6 +1,6 @@
 {
   "name": "@monetrcouk/monetr-sdk",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "description": "SDK to report data into monetr.co.uk",
   "main": "index.js",
   "scripts": {
