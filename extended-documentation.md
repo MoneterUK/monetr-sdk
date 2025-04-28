@@ -60,7 +60,7 @@ monetr.report(
 );
 ```
 
-The kpiId and the dimensionId can be found in app.monetr.co.uk, in the SDK details.
+The token, kpiId and dimensionId can be found in app.monetr.co.uk, in the SDK details.
 
 ---
 
