@@ -16,6 +16,18 @@ const setEnvironment = (environment) => {
   this.apiBase = environments[environment];
 };
 
+let createNewDimensions = false
+
+let organization = ''
+
+const set = (options) => {
+  options.token && setToken(options.token);
+  options.organization && (organization = options.organization);
+  options.environment && setEnvironment(options.environment);
+  options.createNewDimensions && (createNewDimensions = options.createNewDimensions);
+};
+
+
 const report = async (kpiId, kpiDimensionId, value, date) => {
   try {
     const headers = {
@@ -33,46 +45,40 @@ const report = async (kpiId, kpiDimensionId, value, date) => {
     return false;
   }
 };
-const preprocessConfiguration = (configuration) => {
-  const lowercasedConfig = {};
-  for (const [kpiKey, kpiValue] of Object.entries(configuration)) {
-    const lowercasedDimensions = {};
-    for (const [dimensionKey, dimensionValue] of Object.entries(kpiValue.dimensions)) {
-      lowercasedDimensions[dimensionKey.toLowerCase()] = dimensionValue;
-    }
-    lowercasedConfig[kpiKey.toLowerCase()] = {
-      kpi: kpiValue.kpi,
-      dimensions: lowercasedDimensions,
-    };
-  }
-  return lowercasedConfig;
-};
 
-const reportBatch = async (data, configuration) => {
+const reportBatchApi = async (data) => {
   try {
-    const normalizedConfig = preprocessConfiguration(configuration);
-
-    for (const entry of data) {
-      const [kpiKey, dimensionKey] = entry.key.toLowerCase().split(".");
-      const kpiId = normalizedConfig[kpiKey]?.kpi;
-      const dimensionId = normalizedConfig[kpiKey]?.dimensions[dimensionKey];
-
-      if (!kpiId || !dimensionId) {
-        console.error(`Invalid key: ${entry.key}`);
-        continue;
-      }
-
-      const success = await report(kpiId, dimensionId, entry.value, entry.date);
-      if (!success) {
-        console.error(`Failed to report data for key: ${entry.key}`);
-      }
-    }
-    console.log("Batch reporting completed successfully.");
+    const headers = {
+      "monetr-sdk-token": this.token,
+      "monetr-data-organization": this.organization,
+    };
+    const apiBase = this.apiBase || environments.production;
+    await axios.post(
+      `${apiBase}/sdk/kpi-values/report`,
+      data,
+      { headers }
+    );
     return true;
   } catch (e) {
-    console.error("Error in reportBatch:", e);
+    console.error(e);
     return false;
   }
 };
 
-exports.monetr = { setToken, setEnvironment, report, reportBatch };
+const reportBatch = async (data, configuration) => {
+  try {
+    const success = await reportBatchApi(data);
+    if (!success) {
+      console.error(`Failed to report data for key: ${entry.key}`);
+    }
+    else {
+      console.log("Batch reporting completed successfully.");
+    }
+    return true;
+  } catch (e) {
+    console.error("Error in reportBulk:", e);
+    return false;
+  }
+};
+
+exports.monetr = { set, setToken, setEnvironment, report, reportBatch };

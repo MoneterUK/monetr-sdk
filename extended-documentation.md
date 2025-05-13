@@ -48,8 +48,11 @@ Here is a simple example to get you started with authenticating and reporting a 
 ```javascript
 const { monetr } = require("@monetrcouk/monetr-sdk");
 
-// Set your API token
-monetr.setToken('your-organization-token');
+// Set your configuration
+monetr.set({
+  token: "your-organization-token", 
+  organization: "your-organization-id",
+});
 
 // Report a single KPI value
 monetr.report(
@@ -66,41 +69,17 @@ The token, kpiId and dimensionId can be found in app.monetr.co.uk, in the SDK de
 
 ## Configuration
 
-### Environment Configuration
+### Basic Configuration
 
-Set the environment of your choice using `setEnvironment`. The SDK supports:
-- `production` (default)
-- `staging`
-- `development`
+Use the set method to configure the SDK with your credentials and preferences:
+
 
 ```javascript
-// Switch environment to staging
-monetr.setEnvironment('staging');
-```
-
-### KPI & Dimension Mapping for Batch Reports
-
-When reporting in batch, you must supply a configuration object that maps logical KPI names to their IDs and dimension IDs (found in app.monetr.co.uk). Keys are matched case-insensitively, so it is advised to use consistent naming (lowercase recommended).
-
-Example configuration:
-
-```javascript
-const configuration = {
-  visits: {
-    kpi: "a30580b4-607a-4adc-8a37-5c3747b73f45",
-    dimensions: {
-      uk: "3fd4f2ab-74f8-47cb-a2d2-43e52f89f0dc",
-      france: "54ff17bb-e20c-4729-8818-8fdba21c90aa",
-    },
-  },
-  sales: {
-    kpi: "b12345b4-607a-4adc-8a37-5c3747b73faa",
-    dimensions: {
-      online: "6fd4f2ab-74f8-47cb-a2d2-43e52f89f0dd",
-      instore: "7gf4g2ab-74f8-47cb-a2d2-43e52f89f0ff",
-    },
-  },
-};
+monetr.set({
+  token: "your-organization-token", // Required for authentication
+  organization: "your-organization-id", // Required for batch operations
+  createNewDimensions: false // Optional: whether to auto-create dimensions if they don't exist
+});
 ```
 
 ---
@@ -142,45 +121,51 @@ The `reportBatch` method allows you to report multiple KPI values in a single op
 #### Syntax
 
 ```javascript
-monetr.reportBatch(data, configuration);
+monetr.reportBatch(data);
 ```
 
-#### Parameters
+- **Parameters**:
 
-- `data` (array): Array of objects. Each object must include:
-  - `key`: A string combining the KPI name and dimension name, separated by a dot (e.g., `"visits.uk"`).
-  - `date`: The ISO formatted date when the report should be made.
-  - `value`: The numeric value to report.
-- `configuration` (object): Mapping of KPI names to their corresponding IDs and dimensions.
+  - `data` (array): An array of objects, where each object has the following structure:
+    - `projectId` (string): The unique identifier for the project.
+    - `kpiId` (string): The unique identifier for the Key Performance Indicator (KPI).
+    - `dimension` (string): The specific dimension or category to filter or group data.    
+    - `value` (number): The value to report.
+    - `date` (string, optional): The date of the report in ISO format (e.g., `2025-04-01`).
 
 #### Example
 
 ```javascript
-const data = [
-  { key: "visits.uk", date: "2025-04-01", value: 1240 },
-  { key: "visits.france", date: "2025-04-01", value: 132 },
-  { key: "sales.online", date: "2025-04-01", value: 850 },
-  { key: "sales.instore", date: "2025-04-01", value: 400 },
-];
-
+// Define configuration object for ease of reference
 const configuration = {
-  visits: {
-    kpi: "a30580b4-607a-4adc-8a37-5c3747b73f45",
-    dimensions: {
-      uk: "3fd4f2ab-74f8-47cb-a2d2-43e52f89f0dc",
-      france: "54ff17bb-e20c-4729-8818-8fdba21c90aa",
-    },
-  },
-  sales: {
-    kpi: "b12345b4-607a-4adc-8a37-5c3747b73faa",
-    dimensions: {
-      online: "6fd4f2ab-74f8-47cb-a2d2-43e52f89f0dd",
-      instore: "7gf4g2ab-74f8-47cb-a2d2-43e52f89f0ff",
-    },
-  },
+  "visits by country": "71a6fd04-8d58-4286-acaa-f476401eca2d",
+  "kpis": {
+    "visits": {
+      "kpi": "fc635123-97f1-429d-b5d7-a5752fdd1e8e"
+    }
+  }
 };
 
-monetr.reportBatch(data, configuration);
+// Prepare the data array
+const data = [
+  { 
+    projectId: configuration["visits by country"], 
+    kpiId: configuration.kpis.visits.kpi, 
+    dimension: "uk", 
+    date: "2025-04-01", 
+    value: 1240 
+  },
+  { 
+    projectId: configuration["visits by country"], 
+    kpiId: configuration.kpis.visits.kpi, 
+    dimension: "france", 
+    date: "2025-04-01", 
+    value: 135 
+  },
+];
+
+// Send the batch report
+monetr.reportBatch(data);
 ```
 
 The SDK preprocesses the configuration to ensure case-insensitive matching. For instance, both `"visits.uk"` and `"Visits.UK"` will correctly match the configuration mapped under the lowercase keys.
@@ -202,8 +187,10 @@ const app = express();
 app.use(bodyParser.json());
 
 // Configure monetr
-monetr.setToken("your-organization-token");
-monetr.setEnvironment("production");
+monetr.set({
+  token: "your-organization-token",
+  organization: "your-organization-id"
+});
 
 app.post("/report", async (req, res) => {
   const { kpiId, dimensionId, value, date } = req.body;
@@ -223,45 +210,47 @@ app.listen(3000, () => {
 
 ### Integration with Data Pipelines
 
-You may also integrate `monetr-sdk` as part of data processing scripts to report batch metrics. For example, a Node.js script that reads data from a CSV file, constructs data objects, and calls `reportBatch`:
+Here's an example of integrating the SDK with a data processing system that generates batch reports:
 
 ```javascript
-const fs = require("fs");
-const csv = require("csv-parser");
 const { monetr } = require("@monetrcouk/monetr-sdk");
+const dataProcessor = require("./your-data-processor");
 
-monetr.setToken("your-organization-token");
-monetr.setEnvironment("production");
+// Configure SDK
+monetr.set({
+  token: "your-organization-token",
+  organization: "your-organization-id",
+  environment: "production"
+});
 
-const configuration = {
-  performance: {
-    kpi: "kpi-unique-id-for-performance",
-    dimensions: {
-      high: "dimension-id-high",
-      low: "dimension-id-low",
-    },
-  },
+// Define project and KPI configuration
+const config = {
+  projectId: "71a6fd04-8d58-4286-acaa-f476401eca2d",
+  kpiId: "fc635123-97f1-429d-b5d7-a5752fdd1e8e"
 };
 
-const data = [];
-fs.createReadStream("data.csv")
-  .pipe(csv())
-  .on("data", (row) => {
-    // Assuming CSV headers: key, date, value
-    data.push({
-      key: row.key,  // e.g., "performance.high"
-      date: row.date,
-      value: parseInt(row.value, 10),
-    });
-  })
-  .on("end", async () => {
-    console.log("CSV file successfully processed");
-    const result = await monetr.reportBatch(data, configuration);
-    console.log("Batch reporting result:", result);
-  });
-```
+// Process data and create batch reports
+async function processDailyReports() {
+  // Get processed data from your system
+  const processedData = await dataProcessor.getDailyMetrics();
+  
+  // Transform into format expected by monetr-sdk
+  const batchData = processedData.map(item => ({
+    projectId: config.projectId,
+    kpiId: config.kpiId,
+    dimension: item.region,
+    value: item.count,
+    date: item.date
+  }));
+  
+  // Send batch report
+  const result = await monetr.reportBatch(batchData);
+  console.log("Batch report result:", result);
+}
 
-Replace `"data.csv"` and the configuration with your actual file and KPI mapping.
+// Run daily reporting
+processDailyReports().catch(console.error);
+```
 
 ---
 
