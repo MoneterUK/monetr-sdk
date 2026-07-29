@@ -174,6 +174,39 @@ const reportDashboard = async (projectId, data) => {
   }
 };
 
+/**
+ * Upload WC booking rows to a WC_BOOKING project.
+ * The API upserts by (project_id, order_id), so incremental re-uploads are
+ * safe and no clearing is needed for a sync loop. Pass { clearFirst: true }
+ * to wipe the project's rows before uploading (full rebuild).
+ */
+const reportWcBooking = async (projectId, rows, options = {}) => {
+  const headers = dashboardHeaders();
+  const base = `${apiBase}/projects/${projectId}/wc-booking-data`;
+  const axiosOpts = { headers, maxContentLength: Infinity, maxBodyLength: Infinity };
+
+  try {
+    if (options.clearFirst) {
+      console.log(`Clearing existing WC booking data for project ${projectId}...`);
+      await axios.delete(base, { headers });
+    }
+
+    let uploaded = 0;
+    for (let i = 0; i < rows.length; i += dashboardChunkSize) {
+      const chunk = rows.slice(i, i + dashboardChunkSize);
+      await axios.post(base, { rows: chunk }, axiosOpts);
+      uploaded += chunk.length;
+      console.log(`Uploaded ${uploaded}/${rows.length} WC booking rows...`);
+    }
+
+    console.log("WC booking upload complete.");
+    return true;
+  } catch (e) {
+    console.error("WC booking upload failed:", e.message || e);
+    return false;
+  }
+};
+
 exports.monetr = {
   set,
   setToken,
@@ -183,4 +216,5 @@ exports.monetr = {
   authenticateWithCredentials,
   deleteDashboardData,
   reportDashboard,
+  reportWcBooking,
 };
