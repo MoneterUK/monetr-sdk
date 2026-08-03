@@ -11,18 +11,21 @@ let token = null;
 let apiBase = environments.production;
 let organization = "";
 let createNewDimensions = false;
+// "organization" when `token` holds an organization SDK key, "jwt" when it
+// holds a user JWT. Decides which headers the dashboard calls send.
+let authMode = null;
 
 const batchSize = 200;
 const dashboardChunkSize = 500;
 
 const set = (options) => {
-  if (options.token) token = options.token;
+  if (options.token) { token = options.token; authMode = "organization"; }
   if (options.organization) organization = options.organization;
   if (options.environment) apiBase = environments[options.environment] || apiBase;
   if (options.createNewDimensions) createNewDimensions = options.createNewDimensions;
 };
 
-const setToken = (t) => { token = t; };
+const setToken = (t) => { token = t; authMode = "organization"; };
 const setEnvironment = (env) => { apiBase = environments[env] || apiBase; };
 
 // ── KPI Reporting ─────────────────────────────────────────
@@ -88,7 +91,9 @@ const reportBatch = async (data) => {
 
 /**
  * Authenticate with email/password and store the JWT token.
- * Required for dashboard operations (they use user JWT, not SDK token).
+ * Use this for an interactive or user-owned caller. Scheduled jobs should
+ * instead configure an organization key with
+ * `set({ token, organization })` — see `dashboardHeaders`.
  */
 const authenticateWithCredentials = async (email, password) => {
   try {
@@ -96,6 +101,7 @@ const authenticateWithCredentials = async (email, password) => {
     const jwt = response.data?.accessToken || response.data?.access_token || response.data?.token;
     if (!jwt) throw new Error("No token in auth response");
     token = jwt;
+    authMode = "jwt";
     return true;
   } catch (e) {
     console.error("Authentication failed:", e.message || e);
@@ -103,9 +109,15 @@ const authenticateWithCredentials = async (email, password) => {
   }
 };
 
-const dashboardHeaders = () => ({
-  Authorization: `Bearer ${token}`,
-});
+/**
+ * The dashboard routes accept either credential. Send whichever one was
+ * configured: an organization key goes in the same two headers the KPI
+ * reporting calls use, a user JWT goes in the bearer.
+ */
+const dashboardHeaders = () =>
+  authMode === "organization"
+    ? { "monetr-sdk-token": token, "monetr-data-organization": organization }
+    : { Authorization: `Bearer ${token}` };
 
 /**
  * Delete all dashboard data for a project (summary, extras, turnaround).
