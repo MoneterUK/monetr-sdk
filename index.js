@@ -219,6 +219,38 @@ const reportWcBooking = async (projectId, rows, options = {}) => {
   }
 };
 
+/**
+ * Flag the orders a full pass did not return — the ones deleted upstream.
+ *
+ * `seenSince` must be a timestamp taken BEFORE the full pass started: the API
+ * flags every row it has not stamped since then. Call this ONLY after a
+ * complete, successful upload of every order. After a partial one it would
+ * flag orders that are perfectly alive, which is why the API also refuses any
+ * reconciliation that would touch more than a fifth of the project.
+ *
+ * Returns the API's answer ({ flagged, live, refused? }) or null on failure,
+ * so the caller can log a refusal instead of treating it as success.
+ */
+const reconcileWcBooking = async (projectId, seenSince) => {
+  const url = `${apiBase}/projects/${projectId}/wc-booking-data/reconcile`;
+  try {
+    const { data } = await axios.post(
+      url,
+      { seenSince },
+      { headers: dashboardHeaders() }
+    );
+    if (data && data.refused) {
+      console.error(`WC booking reconcile refused: ${data.refused}`);
+    } else if (data) {
+      console.log(`WC booking reconcile: flagged ${data.flagged} of ${data.live} orders.`);
+    }
+    return data ?? null;
+  } catch (e) {
+    console.error("WC booking reconcile failed:", e.message || e);
+    return null;
+  }
+};
+
 exports.monetr = {
   set,
   setToken,
@@ -229,4 +261,5 @@ exports.monetr = {
   deleteDashboardData,
   reportDashboard,
   reportWcBooking,
+  reconcileWcBooking,
 };
