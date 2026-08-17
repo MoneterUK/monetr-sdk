@@ -251,6 +251,63 @@ const reconcileWcBooking = async (projectId, seenSince) => {
   }
 };
 
+/**
+ * Upload order notes. Upserts by (project_id, note_id), so re-sending is safe.
+ *
+ * There are several times more notes than orders — SunSkips holds ~46,000
+ * against ~12,700 — so this chunks like the orders upload and reports progress.
+ */
+const reportWcBookingNotes = async (projectId, rows) => {
+  if (!rows.length) return true;
+
+  const headers = dashboardHeaders();
+  const base = `${apiBase}/projects/${projectId}/wc-booking-notes`;
+  const axiosOpts = { headers, maxContentLength: Infinity, maxBodyLength: Infinity };
+
+  try {
+    let uploaded = 0;
+    for (let i = 0; i < rows.length; i += dashboardChunkSize) {
+      const chunk = rows.slice(i, i + dashboardChunkSize);
+      await axios.post(base, { rows: chunk }, axiosOpts);
+      uploaded += chunk.length;
+      console.log(`Uploaded ${uploaded}/${rows.length} order notes...`);
+    }
+    console.log("Order notes upload complete.");
+    return true;
+  } catch (e) {
+    console.error("Order notes upload failed:", e.message || e);
+    return false;
+  }
+};
+
+/**
+ * Replace the sales rep roster — sent whole, because a rep removed upstream
+ * should stop being offered as a filter.
+ *
+ * An empty list is refused here rather than sent: it almost always means the
+ * source could not be read, and wiping the roster over a blip would empty a
+ * filter the office relies on.
+ */
+const reportWcBookingSalesReps = async (projectId, reps) => {
+  if (!reps.length) {
+    console.error("Sales rep roster is empty — not sending, the existing one is kept.");
+    return false;
+  }
+
+  try {
+    await axios.post(
+      `${apiBase}/projects/${projectId}/wc-booking-sales-reps`,
+      { rows: reps },
+      { headers: dashboardHeaders() }
+    );
+    console.log(`Sales rep roster updated (${reps.length} reps).`);
+    return true;
+  } catch (e) {
+    console.error("Sales rep roster upload failed:", e.message || e);
+    return false;
+  }
+};
+
 exports.monetr = {
   set,
   setToken,
@@ -262,4 +319,6 @@ exports.monetr = {
   reportDashboard,
   reportWcBooking,
   reconcileWcBooking,
+  reportWcBookingNotes,
+  reportWcBookingSalesReps,
 };
