@@ -281,6 +281,37 @@ const reportWcBookingNotes = async (projectId, rows) => {
 };
 
 /**
+ * Upload order lines. Upserts by (project_id, item_id), so re-sending is safe.
+ *
+ * Every line travels, container included — the order row already denormalises
+ * the container, but a line table that omitted it would be a trap for whoever
+ * queries it next. Roughly one line per order plus a few hundred extras, so
+ * this is a smaller payload than the notes.
+ */
+const reportWcBookingLines = async (projectId, rows) => {
+  if (!rows.length) return true;
+
+  const headers = dashboardHeaders();
+  const base = `${apiBase}/projects/${projectId}/wc-booking-lines`;
+  const axiosOpts = { headers, maxContentLength: Infinity, maxBodyLength: Infinity };
+
+  try {
+    let uploaded = 0;
+    for (let i = 0; i < rows.length; i += dashboardChunkSize) {
+      const chunk = rows.slice(i, i + dashboardChunkSize);
+      await axios.post(base, { rows: chunk }, axiosOpts);
+      uploaded += chunk.length;
+      console.log(`Uploaded ${uploaded}/${rows.length} order lines...`);
+    }
+    console.log("Order lines upload complete.");
+    return true;
+  } catch (e) {
+    console.error("Order lines upload failed:", e.message || e);
+    return false;
+  }
+};
+
+/**
  * Replace the sales rep roster — sent whole, because a rep removed upstream
  * should stop being offered as a filter.
  *
@@ -320,5 +351,6 @@ exports.monetr = {
   reportWcBooking,
   reconcileWcBooking,
   reportWcBookingNotes,
+  reportWcBookingLines,
   reportWcBookingSalesReps,
 };
